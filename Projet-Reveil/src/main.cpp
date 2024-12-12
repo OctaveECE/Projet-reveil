@@ -151,7 +151,6 @@ const byte* CHIFFRE_[] = {
 
 void setup() {
   Serial.begin(9600);
-  pinMode(sensorPin, INPUT);
   
   if (!rtc.begin()) {
   Serial.println("Erreur de communication avec le module RTC");
