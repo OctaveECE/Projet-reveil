@@ -12,10 +12,25 @@
 #define adresseDeLaMatrice2             2
 #define adresseDeLaMatrice3             3
 #define delaiAllumageLed                100       // Temps de maintien d'allumage LED, exprimé en millisecondes
-#define delaiEntreChaqueChangementAffichage  100
-RTC_DS1307 rtc;
+#define delaiEntreChaqueChangementAffichage  900
+#define tempsDeClignottementChaqueSeconde 100
 
+
+RTC_DS1307 rtc;
 LedControl matriceLed = LedControl(brochePourLesDonnees, brochePourLhorloge, brocheDeSelection, nombreDeMatricesLedRaccordees);
+
+
+
+const byte ETEINT[] PROGMEM = {
+  0b00000000, 
+  0b00000000,   // 2ème ligne de leds pour ce chiffre
+  0b00000000,   // 3ème ligne de leds pour ce chiffre
+  0b00000000,   // 4ème ligne de leds pour ce chiffre
+  0b00000000,   // 5ème ligne de leds pour ce chiffre
+  0b00000000,   // 6ème ligne de leds pour ce chiffre
+  0b00000000,   // 7ème ligne de leds pour ce chiffre
+  0b00000000    // 8ème ligne de leds pour ce chiffre
+};
 
 const byte CHIFFRE_0[] PROGMEM = {
   0b00111100, 
@@ -127,18 +142,22 @@ const byte CHIFFRE_9[] PROGMEM = {
   0b00111100    
 };
 
+const byte* ECRANETEINT = ETEINT;
+
 const byte* CHIFFRE_[] = {
   CHIFFRE_0, CHIFFRE_1, CHIFFRE_2, CHIFFRE_3, CHIFFRE_4,
   CHIFFRE_5, CHIFFRE_6, CHIFFRE_7, CHIFFRE_8, CHIFFRE_9
 };
 
 void setup() {
-
+  Serial.begin(9600);
+  pinMode(sensorPin, INPUT);
+  
   if (!rtc.begin()) {
   Serial.println("Erreur de communication avec le module RTC");
   while (1);
 }
-
+rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
 
  
   matriceLed.shutdown(adresseDeLaMatrice, false); 
@@ -167,6 +186,7 @@ void afficherChiffreOuSymbole(byte indixMatrice, byte* pointeurVersChiffreOuSymb
 
 
 void loop() {
+ 
 DateTime now = rtc.now();
 
   // Récupérer l'heure et les minutes
@@ -178,11 +198,18 @@ DateTime now = rtc.now();
   int minute_Unite = minute % 10;
 
   // Affichage des chiffres sur les matrices
-  afficherChiffreOuSymbole(0, CHIFFRE_[heure_Dizaines]);   // 1ère matrice : dizaine de l'heure
-  afficherChiffreOuSymbole(1, CHIFFRE_[heure_Unite]);      // 2ème matrice : unité de l'heure
-  afficherChiffreOuSymbole(2, CHIFFRE_[minute_Dizaine]);   
-  afficherChiffreOuSymbole(3, CHIFFRE_[minute_Unite]);     
 
-  delay(delaiEntreChaqueChangementAffichage);   
- 
+  afficherChiffreOuSymbole(3, CHIFFRE_[heure_Dizaines]);   // 1ère matrice : dizaine de l'heure
+  afficherChiffreOuSymbole(2, CHIFFRE_[heure_Unite]);      // 2ème matrice : unité de l'heure
+  afficherChiffreOuSymbole(1, CHIFFRE_[minute_Dizaine]);   
+  afficherChiffreOuSymbole(0, CHIFFRE_[minute_Unite]);     
+  
+  delay(delaiEntreChaqueChangementAffichage);  
+  
+  afficherChiffreOuSymbole(0,ECRANETEINT );   // 1ère matrice : dizaine de l'heure
+  afficherChiffreOuSymbole(1,ECRANETEINT );      // 2ème matrice : unité de l'heure
+  afficherChiffreOuSymbole(2,ECRANETEINT );   
+  afficherChiffreOuSymbole(3,ECRANETEINT ); 
+
+  delay(tempsDeClignottementChaqueSeconde);
 }
