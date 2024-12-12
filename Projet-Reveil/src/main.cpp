@@ -2,7 +2,9 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
 #include <RTClib.h>
+#include <Arduino.h>
 #define brocheDeSelection               10        // Sortie D10 de l'Arduino (/SS)  vers la broche CS  de la matrice LED
 #define brochePourLesDonnees            11        // Sortie D11 de l'Arduino (MOSI) vers la broche DIN de la matrice LED
 #define brochePourLhorloge              13        // Sortie D13 de l'Arduino (SCK)  vers la broche CLK de la matrice LED
@@ -12,25 +14,18 @@
 #define adresseDeLaMatrice2             2
 #define adresseDeLaMatrice3             3
 #define delaiAllumageLed                100       // Temps de maintien d'allumage LED, exprimé en millisecondes
-#define delaiEntreChaqueChangementAffichage  900
-#define tempsDeClignottementChaqueSeconde 100
-
-
+#define delaiEntreChaqueChangementAffichage  100
+#define SCREEN_WIDTH 128 // Largeur de l'écran
+#define SCREEN_HEIGHT 64 // Hauteur de l'écran
+#define buzzer 0
+#define boutonpin 2
+#define SW 7
+#define CLK 5 
+#define DT 6 
+int frequence[] = {2000,3000};
 RTC_DS1307 rtc;
+
 LedControl matriceLed = LedControl(brochePourLesDonnees, brochePourLhorloge, brocheDeSelection, nombreDeMatricesLedRaccordees);
-
-
-
-const byte ETEINT[] PROGMEM = {
-  0b00000000, 
-  0b00000000,   // 2ème ligne de leds pour ce chiffre
-  0b00000000,   // 3ème ligne de leds pour ce chiffre
-  0b00000000,   // 4ème ligne de leds pour ce chiffre
-  0b00000000,   // 5ème ligne de leds pour ce chiffre
-  0b00000000,   // 6ème ligne de leds pour ce chiffre
-  0b00000000,   // 7ème ligne de leds pour ce chiffre
-  0b00000000    // 8ème ligne de leds pour ce chiffre
-};
 
 const byte CHIFFRE_0[] PROGMEM = {
   0b00111100, 
@@ -142,21 +137,117 @@ const byte CHIFFRE_9[] PROGMEM = {
   0b00111100    
 };
 
-const byte* ECRANETEINT = ETEINT;
-
 const byte* CHIFFRE_[] = {
   CHIFFRE_0, CHIFFRE_1, CHIFFRE_2, CHIFFRE_3, CHIFFRE_4,
   CHIFFRE_5, CHIFFRE_6, CHIFFRE_7, CHIFFRE_8, CHIFFRE_9
 };
 
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+void demander_heure2(int* heure){
+   int valeurCLK = digitalRead(CLK);
+int valeurSW = digitalRead(SW);
+int valeurDT = digitalRead(DT);
+    display.clearDisplay(); // Effacer l'écran
+    // Paramètres du texte
+    display.setTextSize(3); // Taille du texte
+    display.setTextColor(WHITE); // Couleur du texte
+    display.setCursor(0, 10); // Position du texte
+    display.println("donner l'heure:\n");// Affichage du message
+    while(valeurSW == HIGH){
+    if(valeurCLK!=valeurDT){
+    *heure++;
+    display.clearDisplay(); // Effacer l'écran
+    // Paramètres du texte
+    display.setTextSize(1); // Taille du texte
+    display.setTextColor(WHITE); // Couleur du texte
+    display.setCursor(0, 10); // Position du texte
+    display.println(*heure);
+    display.display();
+    }
+    }
+
+    
+
+}
+void demander_minute2(int* minute){
+   int valeurCLK = digitalRead(CLK);
+int valeurSW = digitalRead(SW);
+int valeurDT = digitalRead(DT);
+    display.clearDisplay(); // Effacer l'écran
+    // Paramètres du texte
+    display.setTextSize(3); // Taille du texte
+    display.setTextColor(WHITE); // Couleur du texte
+    display.setCursor(0, 10); // Position du texte
+    display.println("donner les minutes:\n");// Affichage du message
+    while(valeurSW == HIGH){
+    if(valeurCLK!=valeurDT){
+    minute++;
+    display.clearDisplay(); // Effacer l'écran
+    // Paramètres du texte
+    display.setTextSize(1); // Taille du texte
+    display.setTextColor(WHITE); // Couleur du texte
+    display.setCursor(0, 10); // Position du texte
+    display.println(*minute);
+    display.display();
+    }
+    }
+}
+void modifier_temps(int* heure,int* minute){
+  demander_heure2(*heure);
+  demander_minute2(*minute);
+
+}
+//void modifier_
+void menu(int* heure,int*minute){
+  int valeurCLK = digitalRead(CLK);
+int valeurSW = digitalRead(SW);
+int valeurDT = digitalRead(DT);
+int choix_du_menu = 1;
+while(valeurSW == HIGH){
+if(valeurCLK!=valeurDT){
+choix_du_menu++;
+if (choix_du_menu == 4){
+choix_du_menu = 1; }
+}
+}
+
+switch (choix_du_menu){
+  case 0:
+    modifier_temps(heure,minute);
+
+}
+
+
+
+}
+
 void setup() {
-  Serial.begin(9600);
-  
+Serial.begin(115200); // Initialisation de la communication série
+
+    // Initialisation de l'écran OLED
+    if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+        Serial.println(F("Échec de l'initialisation de l'écran SSD1306"));
+        for (;;) {} // Boucle infinie en cas d'échec
+    }
+
+    delay(2000); // Attente de 2 secondes
+    display.clearDisplay(); // Effacer l'écran
+
+    // Paramètres du texte
+    display.setTextSize(1); // Taille du texte
+    display.setTextColor(WHITE); // Couleur du texte
+    display.setCursor(0, 10); // Position du texte
+
+    // Affichage du message
+    display.println("salam");
+    display.display(); // Mise à jour de l'affichage
+
   if (!rtc.begin()) {
   Serial.println("Erreur de communication avec le module RTC");
   while (1);
 }
-rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+
 
  
   matriceLed.shutdown(adresseDeLaMatrice, false); 
@@ -185,7 +276,6 @@ void afficherChiffreOuSymbole(byte indixMatrice, byte* pointeurVersChiffreOuSymb
 
 
 void loop() {
- 
 DateTime now = rtc.now();
 
   // Récupérer l'heure et les minutes
@@ -197,18 +287,17 @@ DateTime now = rtc.now();
   int minute_Unite = minute % 10;
 
   // Affichage des chiffres sur les matrices
-
   afficherChiffreOuSymbole(3, CHIFFRE_[heure_Dizaines]);   // 1ère matrice : dizaine de l'heure
   afficherChiffreOuSymbole(2, CHIFFRE_[heure_Unite]);      // 2ème matrice : unité de l'heure
   afficherChiffreOuSymbole(1, CHIFFRE_[minute_Dizaine]);   
   afficherChiffreOuSymbole(0, CHIFFRE_[minute_Unite]);     
-  
-  delay(delaiEntreChaqueChangementAffichage);  
-  
-  afficherChiffreOuSymbole(0,ECRANETEINT );   // 1ère matrice : dizaine de l'heure
-  afficherChiffreOuSymbole(1,ECRANETEINT );      // 2ème matrice : unité de l'heure
-  afficherChiffreOuSymbole(2,ECRANETEINT );   
-  afficherChiffreOuSymbole(3,ECRANETEINT ); 
 
-  delay(tempsDeClignottementChaqueSeconde);
+  delay(delaiEntreChaqueChangementAffichage);   
+  static bool etatPrecedentBouton = HIGH;
+  int digitalRead(uint8_t pin);
+  int etat_bouton = digitalRead(boutonpin);
+  if (etat_bouton == LOW && etatPrecedentBouton == HIGH ){
+
+  }
+
 }
