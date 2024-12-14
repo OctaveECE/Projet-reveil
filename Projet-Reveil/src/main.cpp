@@ -233,8 +233,8 @@ void afficher24h(int heure, int minute){
 
 void afficher12h(int heure, int minute){
 
-  int heure_Dizaines = (heure > 12? heure/2 : heure) / 10;
-  int heure_Unite = (heure > 12? heure/2 : heure) % 10;
+  int heure_Dizaines = (heure > 12? heure-12 : heure) / 10;
+  int heure_Unite = (heure > 12? heure-12 : heure) % 10;
   int minute_Dizaine = minute / 10;
   int minute_Unite = minute % 10;
   
