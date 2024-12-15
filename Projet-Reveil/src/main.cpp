@@ -4,7 +4,6 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <RTClib.h>
-#define menu.h
 #define brocheDeSelection               10        // Sortie D10 de l'Arduino (/SS)  vers la broche CS  de la matrice LED
 #define brochePourLesDonnees            11        // Sortie D11 de l'Arduino (MOSI) vers la broche DIN de la matrice LED
 #define brochePourLhorloge              13        // Sortie D13 de l'Arduino (SCK)  vers la broche CLK de la matrice LED
@@ -18,6 +17,15 @@
 #define tempsDeClignottementChaqueSeconde 100
 #define SCREEN_WIDTH 128 // Largeur de l'écran OLED, en pixels
 #define SCREEN_HEIGHT 64 // Hauteur de l'écran OLED, en pixels
+#define BUZZER_PIN 7
+#define NOTE_DO  262
+#define NOTE_RE  294
+#define NOTE_MI  330
+#define NOTE_FA  349
+#define NOTE_SOL 392
+#define NOTE_LA  440
+#define NOTE_SI  494
+#define NOTE_DO2 523
 
 char menu1[] = "Test menu 1";
 char menu2[] = "Test menu 2";
@@ -171,9 +179,20 @@ void setup() {
   Serial.println(F("Échec de l'initialisation de l'écran SSD1306"));
   while(1); // Boucle infinie en cas d'échec
   }
+  Serial.flush();
 
   rtc.adjust(DateTime(F(__DATE__), F(__TIME__))); // remet le module rtc a l'heure actuelle 
   
+  char menu1[] = "Test menu 1";
+  char menu2[] = "Test menu 2";
+  char menu3[] = "Test menu 3";
+  int heureALARM;
+  int minuteALARM;
+
+  int melodie[] = {
+  NOTE_DO, NOTE_RE, NOTE_MI, NOTE_FA, NOTE_SOL, NOTE_LA, NOTE_SI, NOTE_DO2
+};
+
   display.clearDisplay();
  
   matriceLed.shutdown(adresseDeLaMatrice, false); 
@@ -197,6 +216,29 @@ void afficherChiffreOuSymbole(byte indixMatrice, byte* pointeurVersChiffreOuSymb
     // Utilise la matrice correspondante pour afficher les données
     matriceLed.setRow(indixMatrice, ligne, pgm_read_byte_near(pointeurVersChiffreOuSymbole + ligne));
   }
+}
+
+void testUnitaireRTC(int heure, int minute){
+  Serial.begin(9600);
+  Serial.print(heure);
+  Serial.println(minute);
+  delay(100);
+  Serial.flush();
+}
+
+void testUnitaireOLED(){
+  Serial.begin(115200);
+  display.fillRect(0, 64, 128, 64, WHITE);
+  delay(500)
+  Serial.flush()
+}
+
+void testUnitaireLCD(){
+  afficherChiffreOuSymbole(3, ECRANETEINT);  
+  afficherChiffreOuSymbole(2, ECRANETEINT);     
+  afficherChiffreOuSymbole(1, ECRANETEINT);   
+  afficherChiffreOuSymbole(0, ECRANETEINT);
+  delay(100)
 }
 
 void ClignottementChaqueSeconde(){
@@ -248,11 +290,17 @@ void afficher12h(int heure, int minute){
 }
 
 void changerHeureLED(int heure, int minute){
-int nouvelleHeure;
-int nouvelleMinute;
-/*ajouter code qui modifie nouvelleHeure et nouvelleMinute en fonction
-de l'encodeur rotatif*/ 
-rtc.adjust(DateTime((nouvelleHeure*3600)+(nouvelleMinute*60)));
+  
+  /*ajouter code qui modifie nouvelleHeure et nouvelleMinute en fonction
+  de l'encodeur rotatif*/ 
+  rtc.adjust(DateTime((heure*3600)+(minute*60)));
+}
+
+void jouerAalarm() {
+  for (int i = 0; i < sizeof(melodie) / sizeof(melodie[0]); i++) {
+    tone(BUZZER_PIN, melodie[i], 400);  
+    noTone(BUZZER_PIN);        
+  }
 }
 
 void menuSansSelection(){
@@ -308,5 +356,7 @@ void loop() {
   int minute = now.minute();
 
   afficher24h(heure, minute);
+
+  testUnitaireRTC(heure, minute);
 
 }
