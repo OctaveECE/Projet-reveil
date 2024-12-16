@@ -167,11 +167,12 @@ const byte* CHIFFRE_[] = {
 volatile int lastEncoded = 0;
 volatile long encoderValue = 0;
 
-int choix_du_menu = 1;
+int choixMenu = 1;
+int choixSousMenu = 1;
 
-char menu1[] = "Changer Heures";
-char menu2[] = "Conversion";
-char menu3[] = "Test menu 3";
+char menu1[] = "Reglages Heure";
+char menu2[] = "Reglages Reveil";
+char menu3[] = "Retour";
 
 int heureALARM;
 int minuteALARM;
@@ -233,8 +234,6 @@ void setup() {
   matriceLed.clearDisplay(adresseDeLaMatrice1);
   matriceLed.clearDisplay(adresseDeLaMatrice2);
   matriceLed.clearDisplay(adresseDeLaMatrice3);
-
-  Serial.begin(9600);
 }
 
 void afficherChiffreOuSymbole(byte indixMatrice, byte* pointeurVersChiffreOuSymbole) {
@@ -256,8 +255,16 @@ void testUnitaireRTC(int heure, int minute){
 
 void testUnitaireOLED(){
   Serial.begin(115200);
-  display.fillRect(0, 64, 128, 64, WHITE);
+  display.fillRect(0, 0, 128, 64, WHITE);
+  display.display();
   delay(500);
+  Serial.flush();
+}
+
+void testUnitaireEncodeur(){
+  Serial.begin(9600);
+  Serial.println(encoderValue);
+  delay(100);
   Serial.flush();
 }
 
@@ -401,12 +408,9 @@ void menuTroisiemeChoix(){
   display.display();
 }
 
-void testUnitaireEncodeur(){
-  Serial.println(encoderValue);
-  delay(100);
-}
 
-void menu(int choix_du_menu){
+
+void menu(int *choixMenu){
   int valeurSW = digitalRead(SW);
   int valeurDT = digitalRead(DT);
   int valeurCLK = digitalRead(CLK);
@@ -414,15 +418,16 @@ void menu(int choix_du_menu){
     int valeurDT = digitalRead(DT);
     int valeurCLK = digitalRead(CLK);
     if (valeurCLK != valeurDT) {
-      choix_du_menu++;
-      if (choix_du_menu > 3) {
-        choix_du_menu = 1;
+      choixMenu++;
+      if (*choixMenu > 3) {
+        (*choixMenu) = 1;
       }
-      if (choix_du_menu < 1) {
-        choix_du_menu = 3;
+      if (*choixMenu < 1) {
+        (*choixMenu) = 3;
       }
+      delay(150);
     }
-    switch (choix_du_menu) {
+    switch (*choixMenu) {
       case 1:
         menuPremierChoix();
         break;
@@ -433,6 +438,28 @@ void menu(int choix_du_menu){
         menuTroisiemeChoix();
         break;
     }
+    int valeurSW = digitalRead(SW);
+  }
+}
+
+void selectionMenu(){
+  char menu1[] = "Reglages Heure";
+  char menu2[] = "Reglages Reveil";
+  int valeurSW = digitalRead(SW);
+  menu(choixMenu);
+  while(valeurSW == LOW){
+    if (choixMenu == 1) {
+      char menu1[] = "Changer Heure";
+      char menu2[] = "24H / 12H";
+      menu(choixSousMenu);
+    }
+    if (choixMenu == 2) {
+    
+    }
+    if (choixMenu == 3) {
+      
+    }
+    int valeurSW = digitalRead(SW);
   }
 }
 
@@ -445,6 +472,6 @@ void loop() {
   
   
   afficher24h(heure, minute);
-  menu(choix_du_menu);
-  testUnitaireEncodeur();
+  selectionMenu();
+  
 }
