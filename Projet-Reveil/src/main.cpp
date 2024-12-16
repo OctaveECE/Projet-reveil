@@ -4,78 +4,158 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <RTClib.h>
-
-#define brocheDeSelection 10
-#define brochePourLesDonnees 11
-#define brochePourLhorloge 13
-#define nombreDeMatricesLedRaccordees 4
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
-#define SW 7
+#define brocheDeSelection               10        // Sortie D10 de l'Arduino (/SS)  vers la broche CS  de la matrice LED
+#define brochePourLesDonnees            11        // Sortie D11 de l'Arduino (MOSI) vers la broche DIN de la matrice LED
+#define brochePourLhorloge              13        // Sortie D13 de l'Arduino (SCK)  vers la broche CLK de la matrice LED
+#define nombreDeMatricesLedRaccordees   4         // Nombre pouvant aller de 1 à 8 (nombre maxi de matrice led pilotable ici)
+#define adresseDeLaMatrice              0
+#define adresseDeLaMatrice1             1  // Pour les 8 matrices max évoquées ci-dessus, leurs index respectifs (adresses) vont de 0 à 7
+#define adresseDeLaMatrice2             2
+#define adresseDeLaMatrice3             3
+#define delaiAllumageLed                100       // Temps de maintien d'allumage LED, exprimé en millisecondes
+#define delaiEntreChaqueChangementAffichage  900
+#define tempsDeClignottementChaqueSeconde    100
+#define SCREEN_WIDTH 128 // Largeur de l'écran OLED, en pixels
+#define SCREEN_HEIGHT 64 // Hauteur de l'écran OLED, en pixels
+#define BUZZER_PIN 7
+#define SW  7
 #define CLK 5
-#define DT 6
+#define DT  2
+#define NOTE_DO  262
+#define NOTE_RE  294
+#define NOTE_MI  330
+#define NOTE_FA  349
+#define NOTE_SOL 392
+#define NOTE_LA  440
+#define NOTE_SI  494
+#define NOTE_DO2 523
 
-char menu1[] = "Modifier heure";
-char menu2[] = "Mode affichage";
-char menu3[] = "Retour";
+
 
 RTC_DS1307 rtc;
 LedControl matriceLed = LedControl(brochePourLesDonnees, brochePourLhorloge, brocheDeSelection, nombreDeMatricesLedRaccordees);
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
+
 const byte ETEINT[] PROGMEM = {
-  0b00000000, 0b00000000, 0b00000000, 0b00000000,
-  0b00000000, 0b00000000, 0b00000000, 0b00000000
+  0b00000000, 
+  0b00000000,   // 2ème ligne de leds pour ce chiffre
+  0b00000000,   // 3ème ligne de leds pour ce chiffre
+  0b00000000,   // 4ème ligne de leds pour ce chiffre
+  0b00000000,   // 5ème ligne de leds pour ce chiffre
+  0b00000000,   // 6ème ligne de leds pour ce chiffre
+  0b00000000,   // 7ème ligne de leds pour ce chiffre
+  0b00000000    // 8ème ligne de leds pour ce chiffre
 };
 
 const byte CHIFFRE_0[] PROGMEM = {
-  0b00111100, 0b01000010, 0b01000010, 0b01000010,
-  0b01000010, 0b01000010, 0b01000010, 0b00111100
+  0b00111100, 
+  0b01000010,   // 2ème ligne de leds pour ce chiffre
+  0b01000010,   // 3ème ligne de leds pour ce chiffre
+  0b01000010,   // 4ème ligne de leds pour ce chiffre
+  0b01000010,   // 5ème ligne de leds pour ce chiffre
+  0b01000010,   // 6ème ligne de leds pour ce chiffre
+  0b01000010,   // 7ème ligne de leds pour ce chiffre
+  0b00111100    // 8ème ligne de leds pour ce chiffre
 };
 
 const byte CHIFFRE_1[] PROGMEM = {
-  0b00001000, 0b00011000, 0b00101000, 0b00001000,
-  0b00001000, 0b00001000, 0b00001000, 0b00011100
+  0b00001000,   // 1ère ligne de leds pour ce chiffre
+  0b00011000,   // 2ème ligne de leds pour ce chiffre
+  0b00101000,   // 3ème ligne de leds pour ce chiffre
+  0b00001000,   // 4ème ligne de leds pour ce chiffre
+  0b00001000,   // 5ème ligne de leds pour ce chiffre
+  0b00001000,   // 6ème ligne de leds pour ce chiffre
+  0b00001000,   // 7ème ligne de leds pour ce chiffre
+  0b00011100    // 8ème ligne de leds pour ce chiffre
 };
 
 const byte CHIFFRE_2[] PROGMEM = {
-  0b00111100, 0b01000010, 0b01000010, 0b00000100,
-  0b00001000, 0b00010000, 0b00100000, 0b01111110
+  0b00111100,   // 1ère ligne de leds pour ce chiffre
+  0b01000010,   // 2ème ligne de leds pour ce chiffre
+  0b01000010,   // 3ème ligne de leds pour ce chiffre
+  0b00000100,   // 4ème ligne de leds pour ce chiffre
+  0b00001000,   // 5ème ligne de leds pour ce chiffre
+  0b00010000,   // 6ème ligne de leds pour ce chiffre
+  0b00100000,   // 7ème ligne de leds pour ce chiffre
+  0b01111110    // 8ème ligne de leds pour ce chiffre
 };
 
 const byte CHIFFRE_3[] PROGMEM = {
-  0b01111110, 0b00000100, 0b00001000, 0b00011100,
-  0b00000010, 0b00000010, 0b01000010, 0b00111100
+  0b01111110,   // 1ère ligne de leds pour ce chiffre
+  0b00000100,   // 2ème ligne de leds pour ce chiffre
+  0b00001000,   // 3ème ligne de leds pour ce chiffre
+  0b00011100,   // 4ème ligne de leds pour ce chiffre
+  0b00000010,   // 5ème ligne de leds pour ce chiffre
+  0b00000010,   // 6ème ligne de leds pour ce chiffre
+  0b01000010,   // 7ème ligne de leds pour ce chiffre
+  0b00111100    // 8ème ligne de leds pour ce chiffre
 };
 
 const byte CHIFFRE_4[] PROGMEM = {
-  0b00000100, 0b00001100, 0b00010100, 0b00100100,
-  0b01111111, 0b00000100, 0b00000100, 0b00000100
+  0b00000100,   // 1ère ligne de leds pour ce chiffre
+  0b00001100,   // 2ème ligne de leds pour ce chiffre
+  0b00010100,   // 3ème ligne de leds pour ce chiffre
+  0b00100100,   // 4ème ligne de leds pour ce chiffre
+  0b01111111,   // 5ème ligne de leds pour ce chiffre
+  0b00000100,   // 6ème ligne de leds pour ce chiffre
+  0b00000100,   // 7ème ligne de leds pour ce chiffre
+  0b00000100    // 8ème ligne de leds pour ce chiffre
 };
 
 const byte CHIFFRE_5[] PROGMEM = {
-  0b01111110, 0b01000000, 0b01000000, 0b01111100,
-  0b00000010, 0b00000010, 0b01000010, 0b00111100
+  0b01111110,   // 1ère ligne de leds pour ce chiffre
+  0b01000000,   // 2ème ligne de leds pour ce chiffre
+  0b01000000,   // 3ème ligne de leds pour ce chiffre
+  0b01111100,   // 4ème ligne de leds pour ce chiffre
+  0b00000010,   // 5ème ligne de leds pour ce chiffre
+  0b00000010,   // 6ème ligne de leds pour ce chiffre
+  0b01000010,   // 7ème ligne de leds pour ce chiffre
+  0b00111100    // 8ème ligne de leds pour ce chiffre
 };
 
 const byte CHIFFRE_6[] PROGMEM = {
-  0b00111100, 0b01000010, 0b01000000, 0b01111100,
-  0b01000010, 0b01000010, 0b01000010, 0b00111100
+  0b00111100,   // 1ère ligne de leds pour ce chiffre
+  0b01000010,   // 2ème ligne de leds pour ce chiffre
+  0b01000000,   // 3ème ligne de leds pour ce chiffre
+  0b01111100,   // 4ème ligne de leds pour ce chiffre
+  0b01000010,   // 5ème ligne de leds pour ce chiffre
+  0b01000010,   // 6ème ligne de leds pour ce chiffre
+  0b01000010,   // 7ème ligne de leds pour ce chiffre
+  0b00111100    // 8ème ligne de leds pour ce chiffre
 };
 
 const byte CHIFFRE_7[] PROGMEM = {
-  0b01111110, 0b00000010, 0b00000010, 0b00000100,
-  0b00001000, 0b00010000, 0b00100000, 0b01000000
+  0b01111110,   // 1ère ligne de leds pour ce chiffre
+  0b00000010,   // 2ème ligne de leds pour ce chiffre
+  0b00000010,   // 3ème ligne de leds pour ce chiffre
+  0b00000100,   // 4ème ligne de leds pour ce chiffre
+  0b00001000,   // 5ème ligne de leds pour ce chiffre
+  0b00010000,   // 6ème ligne de leds pour ce chiffre
+  0b00100000,   // 7ème ligne de leds pour ce chiffre
+  0b01000000    // 8ème ligne de leds pour ce chiffre
 };
 
 const byte CHIFFRE_8[] PROGMEM = {
-  0b00111100, 0b01000010, 0b01000010, 0b00111100,
-  0b01000010, 0b01000010, 0b01000010, 0b00111100
+  0b00111100,   // 1ère ligne de leds pour ce chiffre
+  0b01000010,   // 2ème ligne de leds pour ce chiffre
+  0b01000010,   // 3ème ligne de leds pour ce chiffre
+  0b00111100,   // 4ème ligne de leds pour ce chiffre
+  0b01000010,   // 5ème ligne de leds pour ce chiffre
+  0b01000010,   // 6ème ligne de leds pour ce chiffre
+  0b01000010,   // 7ème ligne de leds pour ce chiffre
+  0b00111100    // 8ème ligne de leds pour ce chiffre
 };
 
 const byte CHIFFRE_9[] PROGMEM = {
-  0b00111100, 0b01000010, 0b01000010, 0b01000010,
-  0b00111110, 0b00000010, 0b01000010, 0b00111100
+  0b00111100,   
+  0b01000010,   
+  0b01000010,  
+  0b01000010,   
+  0b00111110,   
+  0b00000010,  
+  0b01000010,   
+  0b00111100    
 };
 
 const byte* ECRANETEINT = ETEINT;
@@ -87,178 +167,475 @@ const byte* CHIFFRE_[] = {
 
 volatile int lastEncoded = 0;
 volatile long encoderValue = 0;
-bool mode24Heures = true;
-int choix_du_menu = 1;
+
+int choixMenu = 1;
+int choixSousMenu = 1;
+
+char menu1[] = "Reglages Heure";
+char menu2[] = "Reglages Reveil";
+char menu3[] = "Retour";
+
+int heureALARM;
+int minuteALARM;
+int mode24h12h = 0;
+
+int melodie[] = {
+  NOTE_DO, NOTE_RE, NOTE_MI, NOTE_FA, NOTE_SOL, NOTE_LA, NOTE_SI, NOTE_DO2
+}; 
 
 void updateEncoder() {
   int MSB = digitalRead(CLK);
   int LSB = digitalRead(DT);
-  
+
   int encoded = (MSB << 1) | LSB;
   int sum = (lastEncoded << 2) | encoded;
-  
+
   if (sum == 0b1101 || sum == 0b0100 || sum == 0b0010 || sum == 0b1011) encoderValue++;
   if (sum == 0b1110 || sum == 0b0111 || sum == 0b0001 || sum == 0b1000) encoderValue--;
-  
+
   lastEncoded = encoded;
 }
 
 void setup() {
   Serial.begin(9600);
   if (!rtc.begin()) {
-    Serial.println("Erreur de communication avec le module RTC");
-    while (1);
+  Serial.println("Erreur de communication avec le module RTC");
+  while (1);
   }
+  Serial.flush(); //permet d'utiliser un deuxieme Serial.begin
 
+  Serial.begin(115200); // Initialisation de la communication série
+    // Initialisation de l'écran OLED
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-    Serial.println(F("Échec de l'initialisation de l'écran SSD1306"));
-    while(1);
+  Serial.println(F("Échec de l'initialisation de l'écran SSD1306"));
+  while(1); // Boucle infinie en cas d'échec
   }
+  Serial.flush();
 
-  display.clearDisplay();
-  display.display();
-
-  // Initialisation des matrices LED
-  for(int i = 0; i < nombreDeMatricesLedRaccordees; i++) {
-    matriceLed.shutdown(i, false);
-    matriceLed.setIntensity(i, 2);
-    matriceLed.clearDisplay(i);
-  }
-
+  rtc.adjust(DateTime(F(__DATE__), F(__TIME__))); // remet le module rtc a l'heure actuelle 
+  
   pinMode(SW, INPUT_PULLUP);
   pinMode(CLK, INPUT_PULLUP);
   pinMode(DT, INPUT_PULLUP);
 
   attachInterrupt(digitalPinToInterrupt(CLK), updateEncoder, CHANGE);
   attachInterrupt(digitalPinToInterrupt(DT), updateEncoder, CHANGE);
+
+  display.clearDisplay();
+ 
+  matriceLed.shutdown(adresseDeLaMatrice, false); 
+  matriceLed.shutdown(adresseDeLaMatrice1, false); 
+  matriceLed.shutdown(adresseDeLaMatrice2, false); 
+  matriceLed.shutdown(adresseDeLaMatrice3, false);       
+  matriceLed.setIntensity(adresseDeLaMatrice, 2);
+  matriceLed.setIntensity(adresseDeLaMatrice1, 2);
+  matriceLed.setIntensity(adresseDeLaMatrice2, 2);
+  matriceLed.setIntensity(adresseDeLaMatrice3, 2);       
+  matriceLed.clearDisplay(adresseDeLaMatrice);   
+  matriceLed.clearDisplay(adresseDeLaMatrice1);
+  matriceLed.clearDisplay(adresseDeLaMatrice2);
+  matriceLed.clearDisplay(adresseDeLaMatrice3);
 }
 
-void afficherChiffreOuSymbole(byte indixMatrice, const byte* pointeurVersChiffreOuSymbole) {
+void afficherChiffreOuSymbole(byte indixMatrice, byte* pointeurVersChiffreOuSymbole) {
+  // Affiche le chiffre ou symbole sur une seule matrice à la position spécifiée
   for (int ligne = 0; ligne < 8; ligne++) {
+    // Utilise la matrice correspondante pour afficher les données
     matriceLed.setRow(indixMatrice, ligne, pgm_read_byte_near(pointeurVersChiffreOuSymbole + ligne));
   }
 }
 
-void ClignottementChaqueSeconde() {
-  for(int i = 0; i < nombreDeMatricesLedRaccordees; i++) {
-    matriceLed.setIntensity(i, 2);
-  }
-  delay(900);
-  
-  for(int i = 0; i < nombreDeMatricesLedRaccordees; i++) {
-    matriceLed.setIntensity(i, 0);
-  }
+
+void testUnitaireRTC(int heure, int minute){
+  Serial.begin(9600);
+  Serial.print(heure);
+  Serial.println(minute);
+  delay(100);
+  Serial.flush();
+}
+
+void testUnitaireOLED(){
+  Serial.begin(115200);
+  display.fillRect(0, 0, 128, 64, WHITE);
+  display.display();
+  delay(500);
+  Serial.flush();
+}
+
+void testUnitaireEncodeur(){
+  Serial.begin(9600);
+  Serial.println(encoderValue);
+  delay(100);
+  Serial.flush();
+}
+
+void testUnitaireLCD(){
+  afficherChiffreOuSymbole(3, ECRANETEINT);  
+  afficherChiffreOuSymbole(2, ECRANETEINT);     
+  afficherChiffreOuSymbole(1, ECRANETEINT);   
+  afficherChiffreOuSymbole(0, ECRANETEINT);
   delay(100);
 }
 
-void afficherHeure(int heure, int minute, bool mode24h) {
-  if (!mode24h && heure > 12) {
-    heure -= 12;
-  }
+void ClignottementChaqueSeconde(){
+  matriceLed.setIntensity(adresseDeLaMatrice, 2);
+  matriceLed.setIntensity(adresseDeLaMatrice1, 2);
+  matriceLed.setIntensity(adresseDeLaMatrice2, 2);
+  matriceLed.setIntensity(adresseDeLaMatrice3, 2); 
+
+  delay(delaiEntreChaqueChangementAffichage);  
+  
+  matriceLed.setIntensity(adresseDeLaMatrice, 0);
+  matriceLed.setIntensity(adresseDeLaMatrice1, 0);
+  matriceLed.setIntensity(adresseDeLaMatrice2, 0);
+  matriceLed.setIntensity(adresseDeLaMatrice3, 0);
+
+  delay(tempsDeClignottementChaqueSeconde);
+}
+
+void afficher24h(int heure, int minute){
   
   int heure_Dizaines = heure / 10;
   int heure_Unite = heure % 10;
   int minute_Dizaine = minute / 10;
   int minute_Unite = minute % 10;
 
-  afficherChiffreOuSymbole(3, CHIFFRE_[heure_Dizaines]);
-  afficherChiffreOuSymbole(2, CHIFFRE_[heure_Unite]);
-  afficherChiffreOuSymbole(1, CHIFFRE_[minute_Dizaine]);
+  afficherChiffreOuSymbole(3, CHIFFRE_[heure_Dizaines]);  
+  afficherChiffreOuSymbole(2, CHIFFRE_[heure_Unite]);     
+  afficherChiffreOuSymbole(1, CHIFFRE_[minute_Dizaine]);   
+  afficherChiffreOuSymbole(0, CHIFFRE_[minute_Unite]);     
+  
+  ClignottementChaqueSeconde();
+
+}
+
+void afficher12h(int heure, int minute){
+
+  int heure_Dizaines = (heure > 12? heure-12 : heure) / 10;
+  int heure_Unite = (heure > 12? heure-12 : heure) % 10;
+  int minute_Dizaine = minute / 10;
+  int minute_Unite = minute % 10;
+  
+  afficherChiffreOuSymbole(3, CHIFFRE_[heure_Dizaines]);  
+  afficherChiffreOuSymbole(2, CHIFFRE_[heure_Unite]);     
+  afficherChiffreOuSymbole(1, CHIFFRE_[minute_Dizaine]);   
   afficherChiffreOuSymbole(0, CHIFFRE_[minute_Unite]);
 
   ClignottementChaqueSeconde();
+
 }
 
-void afficherMenu(int selection) {
+void changerHeureLED(int heure, int minute){
+  
+  /*ajouter code qui modifie nouvelleHeure et nouvelleMinute en fonction
+  de l'encodeur rotatif*/ 
+  rtc.adjust(DateTime((heure*3600)+(minute*60)));
+}
+
+void mode12h24h(int mode24h12h, int heure, int minute){
+  if (mode24h12h == 0){
+    afficher24h(heure, minute);
+  } 
+  else afficher12h(heure, minute);
+}
+
+/*
+void jouerAalarm() {
+  for (int i = 0; i < sizeof(melodie) / sizeof(melodie[0]); i++) {
+    tone(BUZZER_PIN, melodie[i], 400);  
+    noTone(BUZZER_PIN);        
+  }
+}
+*/
+void menuSansSelection(){
   display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(WHITE);
-  
-  const char* menus[] = {menu1, menu2, menu3};
-  for(int i = 0; i < 3; i++) {
-    if(i + 1 == selection) {
-      display.fillRect(13, 17 + (i * 15), 70, 13, WHITE);
-      display.setTextColor(BLACK);
-    } else {
-      display.setTextColor(WHITE);
-    }
-    display.setCursor(15, 20 + (i * 15));
-    display.println(menus[i]);
-  }
+  display.setCursor(15, 20);
+  display.println(menu1);
+  display.setTextColor(WHITE);
+  display.setCursor(15, 35);
+  display.println(menu2);
+  display.setTextColor(WHITE);
+  display.setCursor(15, 50);
+  display.println(menu3);
   display.display();
 }
 
-void modifierAffichageLED() {
-  bool modificationEnCours = true;
-  bool modifierHeures = true;
-  DateTime now = rtc.now();
-  int heureTemp = now.hour();
-  int minuteTemp = now.minute();
+void menuPremierChoix(){
+  display.clearDisplay();
+  display.fillRect(13, 17, 70, 13, WHITE);
+  display.setTextColor(BLACK);
+  display.setCursor(15, 20);
+  display.println(menu1);
+  display.setTextColor(WHITE);
+  display.setCursor(15, 35);
+  display.println(menu2);
+  display.setTextColor(WHITE);
+  display.setCursor(15, 50);
+  display.println(menu3);
+  display.display();
+}
+
+void menuSecondChoix(){
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(15, 20);
+  display.println(menu1);
+  display.fillRect(13, 32, 70, 13, WHITE);
+  display.setTextColor(BLACK);
+  display.setCursor(15, 35);
+  display.println(menu2);
+  display.setTextColor(WHITE);
+  display.setCursor(15, 50);
+  display.println(menu3);
+  display.display();
+}
+
+void menuTroisiemeChoix(){
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(15, 20);
+  display.println(menu1);
+  display.setTextColor(WHITE);
+  display.setCursor(15, 35);
+  display.println(menu2);
+  display.fillRect(13, 47, 70, 13, WHITE);
+  display.setTextColor(BLACK);
+  display.setCursor(15, 50);
+  display.println(menu3);
+  display.display();
+}
+
+
+
+
+const char* mainMenu[] = {"Reglages Heure", "Reglages Reveil", "Retour"};
+const char* sousMenHeure[] = {"Changer Heure", "24H / 12H", "Retour"};
+const char* sousMenReveil[] = {"Alarme", "Sonnerie", "Retour"};
+const char* sousMenAlarme[] = {"Heure Alarme", "Alarme ON/OFF", "Retour"};
+const char* sousMenSonnerie[] = {"Choix Sonnerie", "Regler Snooze", "Retour"};
+
+int currentMenuLevel = 0;  // 0 = main menu, 1 = first submenu, 2 = second submenu
+int currentMainMenuIndex = 0;
+int currentHeureMenuIndex = 0;
+int currentReveilMenuIndex = 0;
+int currentAlarmeMenuIndex = 0;
+int currentSonnerieMenuIndex = 0;
+
+void displayMenu() {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+
+  switch (currentMenuLevel) {
+    case 0:  // Main Menu
+      for (int i = 0; i < 3; i++) {
+        display.setCursor(15, 20 + (i * 15));
+        if (i == currentMainMenuIndex) {
+          display.fillRect(13, 17 + (i * 15), 100, 13, WHITE);
+          display.setTextColor(BLACK);
+        } else {
+          display.setTextColor(WHITE);
+        }
+        display.println(mainMenu[i]);
+      }
+      break;
+
+    case 1:  // First Submenu
+      if (currentMainMenuIndex == 0) {  // Reglages Heure
+        for (int i = 0; i < 3; i++) {
+          display.setCursor(15, 20 + (i * 15));
+          if (i == currentHeureMenuIndex) {
+            display.fillRect(13, 17 + (i * 15), 100, 13, WHITE);
+            display.setTextColor(BLACK);
+          } else {
+            display.setTextColor(WHITE);
+          }
+          display.println(sousMenHeure[i]);
+        }
+      } else if (currentMainMenuIndex == 1) {  // Reglages Reveil
+        for (int i = 0; i < 3; i++) {
+          display.setCursor(15, 20 + (i * 15));
+          if (i == currentReveilMenuIndex) {
+            display.fillRect(13, 17 + (i * 15), 100, 13, WHITE);
+            display.setTextColor(BLACK);
+          } else {
+            display.setTextColor(WHITE);
+          }
+          display.println(sousMenReveil[i]);
+        }
+      }
+      break;
+
+    case 2:  // Second Submenu
+      if (currentMainMenuIndex == 1) {  // Reglages Reveil
+        if (currentReveilMenuIndex == 0) {  // Alarme
+          for (int i = 0; i < 3; i++) {
+            display.setCursor(15, 20 + (i * 15));
+            if (i == currentAlarmeMenuIndex) {
+              display.fillRect(13, 17 + (i * 15), 100, 13, WHITE);
+              display.setTextColor(BLACK);
+            } else {
+              display.setTextColor(WHITE);
+            }
+            display.println(sousMenAlarme[i]);
+          }
+        } else if (currentReveilMenuIndex == 1) {  // Sonnerie
+          for (int i = 0; i < 3; i++) {
+            display.setCursor(15, 20 + (i * 15));
+            if (i == currentSonnerieMenuIndex) {
+              display.fillRect(13, 17 + (i * 15), 100, 13, WHITE);
+              display.setTextColor(BLACK);
+            } else {
+              display.setTextColor(WHITE);
+            }
+            display.println(sousMenSonnerie[i]);
+          }
+        }
+      }
+      break;
+  }
   
-  while(modificationEnCours) {
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(WHITE);
-    display.setCursor(0, 0);
-    display.println(modifierHeures ? "Modifier heures:" : "Modifier minutes:");
+  display.display();
+}
+
+void navigateMenu() {
+  int valeurSW = digitalRead(SW);
+  
+  // Button is pressed (LOW)
+  if (valeurSW == LOW) {
+    delay(200);  // Debounce
     
-    display.setCursor(0, 20);
-    display.setTextSize(2);
-    char timeStr[6];
-    sprintf(timeStr, "%02d:%02d", heureTemp, minuteTemp);
-    display.println(timeStr);
-    display.display();
-    
-    afficherHeure(heureTemp, minuteTemp, mode24Heures);
-    
-    if(digitalRead(CLK) != digitalRead(DT)) {
-      if(modifierHeures) {
-        heureTemp = (heureTemp + (digitalRead(CLK) == HIGH ? 1 : -1) + 24) % 24;
-      } else {
-        minuteTemp = (minuteTemp + (digitalRead(CLK) == HIGH ? 1 : -1) + 60) % 60;
-      }
-      delay(200);
+    // Select option
+    switch (currentMenuLevel) {
+      case 0:  // Main Menu
+        if (currentMainMenuIndex == 2) {  // Retour
+          return;
+        }
+        currentMenuLevel = 1;
+        break;
+      
+      case 1:  // First Submenu
+        if (currentMainMenuIndex == 0) {  // Reglages Heure
+          if (currentHeureMenuIndex == 2) {  // Retour
+            currentMenuLevel = 0;
+            return;
+          }
+          switch (currentHeureMenuIndex) {
+            case 0:  // Changer Heure
+            
+              break;
+            case 1:  // 24H / 12H
+              mode24h12h = !mode24h12h;
+              break;
+          }
+        } else if (currentMainMenuIndex == 1) {  // Reglages Reveil
+          if (currentReveilMenuIndex == 2) {  // Retour
+            currentMenuLevel = 0;
+            return;
+          }
+          currentMenuLevel = 2;
+        }
+        break;
+      
+      case 2:  // Second Submenu
+        if (currentMainMenuIndex == 1) {  // Reglages Reveil
+          if (currentReveilMenuIndex == 0) {  // Alarme
+            if (currentAlarmeMenuIndex == 2) {  // Retour
+              currentMenuLevel = 1;
+              return;
+            }
+            switch (currentAlarmeMenuIndex) {
+              case 0:  // Heure Alarme
+                // Implement alarm hour setting
+                break;
+              case 1:  // Alarme ON/OFF
+                // Implement alarm toggle
+                break;
+            }
+          } else if (currentReveilMenuIndex == 1) {  // Sonnerie
+            if (currentSonnerieMenuIndex == 2) {  // Retour
+              currentMenuLevel = 1;
+              return;
+            }
+            switch (currentSonnerieMenuIndex) {
+              case 0:  // Choix Sonnerie
+                // Implement melody selection
+                break;
+              case 1:  // Regler Snooze
+                // Implement snooze setting
+                break;
+            }
+          }
+        }
+        break;
     }
     
-    if(digitalRead(SW) == LOW) {
-      if(modifierHeures) {
-        modifierHeures = false;
-      } else {
-        modificationEnCours = false;
-        rtc.adjust(DateTime(now.year(), now.month(), now.day(), heureTemp, minuteTemp, 0));
-      }
-      delay(500);
+    displayMenu();
+    return;
+  }
+
+  // Check encoder rotation
+  if (encoderValue > 0) {
+    switch (currentMenuLevel) {
+      case 0:
+        currentMainMenuIndex = (currentMainMenuIndex + 1) % 3;
+        break;
+      case 1:
+        if (currentMainMenuIndex == 0) {
+          currentHeureMenuIndex = (currentHeureMenuIndex + 1) % 3;
+        } else if (currentMainMenuIndex == 1) {
+          currentReveilMenuIndex = (currentReveilMenuIndex + 1) % 3;
+        }
+        break;
+      case 2:
+        if (currentReveilMenuIndex == 0) {
+          currentAlarmeMenuIndex = (currentAlarmeMenuIndex + 1) % 3;
+        } else if (currentReveilMenuIndex == 1) {
+          currentSonnerieMenuIndex = (currentSonnerieMenuIndex + 1) % 3;
+        }
+        break;
     }
+    encoderValue = 0;
+    displayMenu();
+  } else if (encoderValue < 0) {
+    switch (currentMenuLevel) {
+      case 0:
+        currentMainMenuIndex = (currentMainMenuIndex - 1 + 3) % 3;
+        break;
+      case 1:
+        if (currentMainMenuIndex == 0) {
+          currentHeureMenuIndex = (currentHeureMenuIndex - 1 + 3) % 3;
+        } else if (currentMainMenuIndex == 1) {
+          currentReveilMenuIndex = (currentReveilMenuIndex - 1 + 3) % 3;
+        }
+        break;
+      case 2:
+        if (currentReveilMenuIndex == 0) {
+          currentAlarmeMenuIndex = (currentAlarmeMenuIndex - 1 + 3) % 3;
+        } else if (currentReveilMenuIndex == 1) {
+          currentSonnerieMenuIndex = (currentSonnerieMenuIndex - 1 + 3) % 3;
+        }
+        break;
+    }
+    encoderValue = 0;
+    displayMenu();
   }
 }
 
-void choisirModeAffichage() {
-  bool selectionEnCours = true;
-  bool choixActuel = mode24Heures;
+void selectionMenu() {
+  static unsigned long lastDisplayTime = 0;
   
-  while(selectionEnCours) {
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(WHITE);
-    display.setCursor(0, 20);
-    display.println("Mode:");
-    display.setCursor(10, 40);
-    display.println(choixActuel ? "-> 24h" : "   24h");
-    display.setCursor(10, 50);
-    display.println(choixActuel ? "   12h" : "-> 12h");
-    display.display();
-    
-    if(digitalRead(CLK) != digitalRead(DT)) {
-      choixActuel = !choixActuel;
-      delay(200);
-    }
-    
-    if(digitalRead(SW) == LOW) {
-      mode24Heures = choixActuel;
-      selectionEnCours = false;
-      delay(500);
-    }
+  // Only update display periodically to avoid flickering
+  if (millis() - lastDisplayTime > 200) {
+    displayMenu();
+    lastDisplayTime = millis();
   }
+  
+  navigateMenu();
 }
 
 void loop() {
@@ -266,36 +643,9 @@ void loop() {
   int heure = now.hour();
   int minute = now.minute();
   
-  if(digitalRead(SW) == LOW) {
-    delay(200);  // Debounce
-    
-    bool menuActif = true;
-    while(menuActif) {
-      afficherMenu(choix_du_menu);
-      
-      if(digitalRead(CLK) != digitalRead(DT)) {
-        choix_du_menu = ((choix_du_menu + (digitalRead(CLK) == HIGH ? 1 : -1) - 1 + 3) % 3) + 1;
-        delay(200);
-      }
-      
-      if(digitalRead(SW) == LOW) {
-        delay(200);
-        switch(choix_du_menu) {
-          case 1:
-            modifierAffichageLED();
-            menuActif = false;
-            break;
-          case 2:
-            choisirModeAffichage();
-            menuActif = false;
-            break;
-          case 3:
-            menuActif = false;
-            break;
-        }
-      }
-    }
-  }
   
-  afficherHeure(heure, minute, mode24Heures);
+  afficher24h(heure, minute);
+  
+  selectionMenu();
+  
 }
