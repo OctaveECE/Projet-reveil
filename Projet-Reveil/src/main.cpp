@@ -14,10 +14,13 @@
 #define adresseDeLaMatrice3             3
 #define delaiAllumageLed                100       // Temps de maintien d'allumage LED, exprimé en millisecondes
 #define delaiEntreChaqueChangementAffichage  900
-#define tempsDeClignottementChaqueSeconde 100
+#define tempsDeClignottementChaqueSeconde    100
 #define SCREEN_WIDTH 128 // Largeur de l'écran OLED, en pixels
 #define SCREEN_HEIGHT 64 // Hauteur de l'écran OLED, en pixels
 #define BUZZER_PIN 7
+#define SW  7
+#define CLK 5
+#define DT  2
 #define NOTE_DO  262
 #define NOTE_RE  294
 #define NOTE_MI  330
@@ -26,10 +29,6 @@
 #define NOTE_LA  440
 #define NOTE_SI  494
 #define NOTE_DO2 523
-
-char menu1[] = "Test menu 1";
-char menu2[] = "Test menu 2";
-char menu3[] = "Test menu 3";
 
 
 RTC_DS1307 rtc;
@@ -165,6 +164,36 @@ const byte* CHIFFRE_[] = {
   CHIFFRE_5, CHIFFRE_6, CHIFFRE_7, CHIFFRE_8, CHIFFRE_9
 };
 
+volatile int lastEncoded = 0;
+volatile long encoderValue = 0;
+
+int choix_du_menu = 1;
+
+char menu1[] = "Changer Heures";
+char menu2[] = "Conversion";
+char menu3[] = "Test menu 3";
+
+int heureALARM;
+int minuteALARM;
+int mode24h12h = 0;
+
+int melodie[] = {
+  NOTE_DO, NOTE_RE, NOTE_MI, NOTE_FA, NOTE_SOL, NOTE_LA, NOTE_SI, NOTE_DO2
+}; 
+
+void updateEncoder() {
+  int MSB = digitalRead(CLK);
+  int LSB = digitalRead(DT);
+
+  int encoded = (MSB << 1) | LSB;
+  int sum = (lastEncoded << 2) | encoded;
+
+  if (sum == 0b1101 || sum == 0b0100 || sum == 0b0010 || sum == 0b1011) encoderValue++;
+  if (sum == 0b1110 || sum == 0b0111 || sum == 0b0001 || sum == 0b1000) encoderValue--;
+
+  lastEncoded = encoded;
+}
+
 void setup() {
   Serial.begin(9600);
   if (!rtc.begin()) {
@@ -183,15 +212,12 @@ void setup() {
 
   rtc.adjust(DateTime(F(__DATE__), F(__TIME__))); // remet le module rtc a l'heure actuelle 
   
-  char menu1[] = "Test menu 1";
-  char menu2[] = "Test menu 2";
-  char menu3[] = "Test menu 3";
-  int heureALARM;
-  int minuteALARM;
+  pinMode(SW, INPUT_PULLUP);
+  pinMode(CLK, INPUT_PULLUP);
+  pinMode(DT, INPUT_PULLUP);
 
-  int melodie[] = {
-  NOTE_DO, NOTE_RE, NOTE_MI, NOTE_FA, NOTE_SOL, NOTE_LA, NOTE_SI, NOTE_DO2
-};
+  attachInterrupt(digitalPinToInterrupt(CLK), updateEncoder, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(DT), updateEncoder, CHANGE);
 
   display.clearDisplay();
  
@@ -208,6 +234,7 @@ void setup() {
   matriceLed.clearDisplay(adresseDeLaMatrice2);
   matriceLed.clearDisplay(adresseDeLaMatrice3);
 
+  Serial.begin(9600);
 }
 
 void afficherChiffreOuSymbole(byte indixMatrice, byte* pointeurVersChiffreOuSymbole) {
@@ -217,6 +244,7 @@ void afficherChiffreOuSymbole(byte indixMatrice, byte* pointeurVersChiffreOuSymb
     matriceLed.setRow(indixMatrice, ligne, pgm_read_byte_near(pointeurVersChiffreOuSymbole + ligne));
   }
 }
+
 
 void testUnitaireRTC(int heure, int minute){
   Serial.begin(9600);
@@ -229,8 +257,8 @@ void testUnitaireRTC(int heure, int minute){
 void testUnitaireOLED(){
   Serial.begin(115200);
   display.fillRect(0, 64, 128, 64, WHITE);
-  delay(500)
-  Serial.flush()
+  delay(500);
+  Serial.flush();
 }
 
 void testUnitaireLCD(){
@@ -238,7 +266,7 @@ void testUnitaireLCD(){
   afficherChiffreOuSymbole(2, ECRANETEINT);     
   afficherChiffreOuSymbole(1, ECRANETEINT);   
   afficherChiffreOuSymbole(0, ECRANETEINT);
-  delay(100)
+  delay(100);
 }
 
 void ClignottementChaqueSeconde(){
@@ -296,13 +324,21 @@ void changerHeureLED(int heure, int minute){
   rtc.adjust(DateTime((heure*3600)+(minute*60)));
 }
 
+void mode12h24h(int mode24h12h, int heure, int minute){
+  if (mode24h12h == 0){
+    afficher24h(heure, minute);
+  } 
+  else afficher12h(heure, minute);
+}
+
+/*
 void jouerAalarm() {
   for (int i = 0; i < sizeof(melodie) / sizeof(melodie[0]); i++) {
     tone(BUZZER_PIN, melodie[i], 400);  
     noTone(BUZZER_PIN);        
   }
 }
-
+*/
 void menuSansSelection(){
   display.clearDisplay();
   display.setTextSize(1);
@@ -319,22 +355,45 @@ void menuSansSelection(){
 }
 
 void menuPremierChoix(){
+  display.clearDisplay();
   display.fillRect(13, 17, 70, 13, WHITE);
   display.setTextColor(BLACK);
   display.setCursor(15, 20);
   display.println(menu1);
+  display.setTextColor(WHITE);
+  display.setCursor(15, 35);
+  display.println(menu2);
+  display.setTextColor(WHITE);
+  display.setCursor(15, 50);
+  display.println(menu3);
   display.display();
 }
 
 void menuSecondChoix(){
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(15, 20);
+  display.println(menu1);
   display.fillRect(13, 32, 70, 13, WHITE);
   display.setTextColor(BLACK);
   display.setCursor(15, 35);
   display.println(menu2);
+  display.setTextColor(WHITE);
+  display.setCursor(15, 50);
+  display.println(menu3);
   display.display();
 }
 
 void menuTroisiemeChoix(){
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(15, 20);
+  display.println(menu1);
+  display.setTextColor(WHITE);
+  display.setCursor(15, 35);
+  display.println(menu2);
   display.fillRect(13, 47, 70, 13, WHITE);
   display.setTextColor(BLACK);
   display.setCursor(15, 50);
@@ -342,21 +401,50 @@ void menuTroisiemeChoix(){
   display.display();
 }
 
+void testUnitaireEncodeur(){
+  Serial.println(encoderValue);
+  delay(100);
+}
+
+void menu(int choix_du_menu){
+  int valeurSW = digitalRead(SW);
+  int valeurDT = digitalRead(DT);
+  int valeurCLK = digitalRead(CLK);
+  while (valeurSW == HIGH) {
+    int valeurDT = digitalRead(DT);
+    int valeurCLK = digitalRead(CLK);
+    if (valeurCLK != valeurDT) {
+      choix_du_menu++;
+      if (choix_du_menu > 3) {
+        choix_du_menu = 1;
+      }
+      if (choix_du_menu < 1) {
+        choix_du_menu = 3;
+      }
+    }
+    switch (choix_du_menu) {
+      case 1:
+        menuPremierChoix();
+        break;
+      case 2:
+        menuSecondChoix();
+        break;
+      case 3:
+        menuTroisiemeChoix();
+        break;
+    }
+  }
+}
+
 void loop() {
   
-  menuSansSelection();
-
-  delay(1000);
-
-  menuTroisiemeChoix();
-
   DateTime now = rtc.now();
   // Récupérer l'heure et les minutes
   int heure = now.hour();
   int minute = now.minute();
-
+  
+  
   afficher24h(heure, minute);
-
-  testUnitaireRTC(heure, minute);
-
+  menu(choix_du_menu);
+  testUnitaireEncodeur();
 }
